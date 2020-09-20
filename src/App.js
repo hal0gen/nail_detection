@@ -1,7 +1,14 @@
 import React, { Component } from "react";
-import "@tensorflow/tfjs";
-import * as cocoSsd from "@tensorflow-models/coco-ssd";
+import * as tf from '@tensorflow/tfjs';
+// import * as cocoSsd from "@tensorflow-models/coco-ssd";
 import "./App.css";
+// import {loadGraphModel} from '@tensorflow/tfjs-converter';
+
+const MODEL_URL = '/model/model.json';
+
+
+// const cat = document.getElementById('cat');
+// model.execute(tf.browser.fromPixels(cat));
 
 class App extends Component {
   state = {
@@ -19,7 +26,9 @@ class App extends Component {
         audio: false
       });
 
-      const model = await cocoSsd.load();
+      // const model = await cocoSsd.load();
+      const model = await tf.loadGraphModel(MODEL_URL, { strict: false });
+      console.log(model);
 
       await this.setState({
         videoElement: this.refs.video,
@@ -36,10 +45,16 @@ class App extends Component {
   }
 
   predictFrame = async () => {
-    const predictions = await this.state.model.detect(this.refs.video);
-    this.drawPredictions(predictions);
+    const canvas = document.getElementById('canvas');
+    const image = tf.browser.fromPixels(canvas);
+    const inputTensor = tf.cast(image, 'int32');
+    const tensor4d = inputTensor.reshape([1, ...inputTensor.shape]);
+    let predictions = await this.state.model.executeAsync(
+      { 'image_tensor' : tf.zeros([1,300,300,3], 'int32') }, ['detection_boxes','detection_scores','detection_classes','num_detections']);
+    tf.print(predictions);
+    // this.drawPredictions(predictions);
     //recursive call
-    this.predictFrame();
+    // this.predictFrame();
   };
 
   drawPredictions = predictions => {
@@ -77,10 +92,10 @@ class App extends Component {
           playsInline
           muted
           ref="video"
-          width="600"
-          height="500"
+          width="300"
+          height="300"
         />
-        <canvas className="position" ref="canvas" width="600" height="500" />
+        <canvas id="canvas" className="position" ref="canvas" width="300" height="300" />
       </div>
     );
   }
